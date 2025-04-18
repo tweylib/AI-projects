@@ -4,9 +4,13 @@ import os
 os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.langsmith_logger import log_to_langsmith_dataset
+
+import config
 from main import initialize_system
 from agents.router import RouterState
 from langchain_core.messages import HumanMessage
+from langsmith import Client
 
 def main():
     st.set_page_config(
@@ -74,8 +78,24 @@ def main():
                 if "messages" in final_state and len(final_state["messages"]) > len(st.session_state.messages):
                     ai_message = final_state["messages"][-1]
                     
+                    def log_to_langsmith_dataset(user_input, ai_output, dataset_name=config.LANGSMITH_DATASET_NAME):
+                        client = Client(api_key=config.LANGCHAIN_API_KEY)
+
+                        # Check if dataset exists or create
+                        dataset = client.read_dataset(dataset_name=dataset_name)
+                        if not dataset:
+                            dataset = client.create_dataset(dataset_name=dataset_name)
+
+                        # Add example
+                        client.create_example(
+                            inputs={"input": user_input},
+                            outputs={"output": ai_output},
+                            dataset_id=dataset.id
+                        )
+
+
                     # Display AI response
-                    print("\nAI Message:", ai_message["content"].source, "\n")
+                    #print("\nAI Message:", ai_message["source"], "\n")
                     st.write(ai_message["content"].content)
                     
                     # Display source info
@@ -88,6 +108,7 @@ def main():
                         with st.expander("View Sources"):
                             for source in ai_message["citations"]:
                                 st.write(f"- {source}")
+                    log_to_langsmith_dataset(prompt, ai_message["content"].content)
 
 if __name__ == "__main__":
     main()

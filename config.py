@@ -9,6 +9,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY", "")
 LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "multi-source-rag")
+LANGSMITH_DATASET_NAME = os.getenv("LANGSMITH_DATASET_NAME", "Chatbot Evaluation Dataset")
 
 # Model Configuration
 LLM_MODEL = "gemini-2.0-flash"  # Free version of Gemma 
