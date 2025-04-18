@@ -1,9 +1,12 @@
 import streamlit as st
 import sys
 import os
+os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from main import initialize_system
 from agents.router import RouterState
+from langchain_core.messages import HumanMessage
 
 def main():
     st.set_page_config(
@@ -37,7 +40,7 @@ def main():
             with st.chat_message("assistant"):
                 st.write(message["content"])
                 
-                # Display source info
+                # Display source info if available
                 if "source" in message:
                     source_type = message["source"]
                     st.caption(f"Source: {source_type}")
@@ -50,11 +53,9 @@ def main():
     
     # Chat input
     if prompt := st.chat_input("Ask something..."):
-        # Add user message to state
-        st.session_state.messages.append({
-            "role": "human",
-            "content": prompt
-        })
+        # Add user message to state as dictionary
+        human_msg = {"role": "human", "content": prompt, "type": "human"}
+        st.session_state.messages.append(human_msg)
         
         # Display user message
         with st.chat_message("user"):
@@ -70,23 +71,23 @@ def main():
                 final_state = st.session_state.workflow.invoke(state)
                 
                 # Extract AI response
-                if final_state.messages and final_state.messages[-1]["role"] == "ai":
-                    ai_message = final_state.messages[-1]
-                    st.write(ai_message["content"])
+                if "messages" in final_state and len(final_state["messages"]) > len(st.session_state.messages):
+                    ai_message = final_state["messages"][-1]
+                    
+                    # Display AI response
+                    print("\nAI Message:", ai_message["content"].source, "\n")
+                    st.write(ai_message["content"].content)
                     
                     # Display source info
-                    source_type = ai_message.get("source", "Unknown")
-                    st.caption(f"Source: {source_type}")
+                    if "source" in ai_message:
+                        source_type = ai_message["source"]
+                        st.caption(f"Source: {source_type}")
                     
                     # Display citations if available
                     if "citations" in ai_message and ai_message["citations"]:
                         with st.expander("View Sources"):
                             for source in ai_message["citations"]:
                                 st.write(f"- {source}")
-        
-        # Update session state
-        
-        st.session_state.messages = final_state.messages
 
 if __name__ == "__main__":
     main()

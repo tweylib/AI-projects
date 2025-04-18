@@ -1,4 +1,6 @@
 import os
+os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
+
 import sys
 from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END
@@ -70,49 +72,33 @@ from langchain_core.messages import HumanMessage
 from langchain.schema import HumanMessage, AIMessage
 from agents.router import RouterState
 
+import streamlit as st
+from langchain_core.messages import HumanMessage, AIMessage
+
 def chat_loop(workflow):
-    print("🤖 Multi-Source RAG Chatbot")
-    print("Type 'exit' to quit")
-    print("-" * 50)
+    st.title("🧠 Multi-Source RAG Chatbot")
 
-    # Start with a RouterState Pydantic object
-    state = RouterState(messages=[])
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    while True:
-        print("\n\nchatloop   ", type(state), state, "\n\n")
+    # Display chat history
+    for msg in st.session_state.messages:
+        role = "👤 You" if msg["role"] == "human" else "🤖 AI"
+        st.markdown(f"**{role}:** {msg['content']}")
 
-        user_input = input("\nYou: ")
-        if user_input.lower() in ["exit", "quit", "q"]:
-            print("Goodbye!")
-            break
+    user_input = st.text_input("Enter your message:")
+    if user_input:
+        # Add user message as dictionary
+        human_msg = {"role": "human", "content": user_input}
+        st.session_state.messages.append(human_msg)
 
-        # ✅ Get messages from current state (could be Pydantic or dict)
-        if hasattr(state, "messages"):
-            messages = state.messages.copy()
-        else:
-            messages = state.get("messages", []).copy()
-
-        # ✅ Append new user message (as dict)
-        user_message = HumanMessage(content=user_input)
-        messages.append(user_message.model_dump())  # convert to dict
-
-        # ✅ Create a valid RouterState for the next workflow step
-        state = RouterState(messages=messages)
-
-        # Run the workflow
+        # Run workflow
+        state = RouterState(messages=st.session_state.messages)
         final_state = workflow.invoke(state)
-
-        # ✅ Display AI response
-        messages = final_state.get("messages", [])
-        # for msg in reversed(messages):
-        msg = messages[-1] 
-        if isinstance(msg, dict) and msg.get("role") == "ai":
-            print(f"\nAI: {msg.get('content', '').content}")
-        else:
-            break
-
-        # Move to the next state
-        state = final_state
+        
+        # Update messages from final state
+        st.session_state.messages = final_state.messages
+        st.experimental_rerun()
 
 
 
