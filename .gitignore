@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+
+# IDE/Editor
+.vscode/
+
+# Virtual environment
+rag_env/
+
+# Miscellaneous
+others/
+chroma_db/ 
+
+first.py
+
+test.py
+
+# Environment secrets (if any)
+.env

@@ -1,0 +1,92 @@
+import streamlit as st
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from main import initialize_system
+from agents.router import RouterState
+
+def main():
+    st.set_page_config(
+        page_title="Multi-Source RAG Chatbot",
+        page_icon="🤖",
+        layout="wide",
+    )
+    
+    st.title("🤖 Multi-Source RAG Chatbot")
+    st.markdown("""
+        This chatbot can answer using three different sources:
+        - **Direct LLM**: General knowledge from the model (Gemma)
+        - **VectorStore RAG**: Internal documents 
+        - **Web Search**: Real-time web information
+    """)
+    
+    # Initialize or get session state variables
+    if "workflow" not in st.session_state:
+        with st.spinner("Initializing system..."):
+            st.session_state.workflow = initialize_system()
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Display chat messages
+    for message in st.session_state.messages:
+        if message["role"] == "human":
+            with st.chat_message("user"):
+                st.write(message["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.write(message["content"])
+                
+                # Display source info
+                if "source" in message:
+                    source_type = message["source"]
+                    st.caption(f"Source: {source_type}")
+                
+                # Display citations if available
+                if "citations" in message and message["citations"]:
+                    with st.expander("View Sources"):
+                        for source in message["citations"]:
+                            st.write(f"- {source}")
+    
+    # Chat input
+    if prompt := st.chat_input("Ask something..."):
+        # Add user message to state
+        st.session_state.messages.append({
+            "role": "human",
+            "content": prompt
+        })
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        # Prepare state for workflow
+        state = RouterState(messages=st.session_state.messages)
+        
+        # Run the workflow with spinner
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                # Run the workflow
+                final_state = st.session_state.workflow.invoke(state)
+                
+                # Extract AI response
+                if final_state.messages and final_state.messages[-1]["role"] == "ai":
+                    ai_message = final_state.messages[-1]
+                    st.write(ai_message["content"])
+                    
+                    # Display source info
+                    source_type = ai_message.get("source", "Unknown")
+                    st.caption(f"Source: {source_type}")
+                    
+                    # Display citations if available
+                    if "citations" in ai_message and ai_message["citations"]:
+                        with st.expander("View Sources"):
+                            for source in ai_message["citations"]:
+                                st.write(f"- {source}")
+        
+        # Update session state
+        
+        st.session_state.messages = final_state.messages
+
+if __name__ == "__main__":
+    main()
