@@ -65,45 +65,58 @@ def initialize_system():
     
     return workflow
 
+from langchain_core.messages import HumanMessage
+
+from langchain.schema import HumanMessage, AIMessage
+from agents.router import RouterState
+
 def chat_loop(workflow):
-    """Simple command-line chat interface."""
     print("🤖 Multi-Source RAG Chatbot")
     print("Type 'exit' to quit")
     print("-" * 50)
-    
-    # Initialize state
+
+    # Start with a RouterState Pydantic object
     state = RouterState(messages=[])
-    
+
     while True:
+        print("\n\nchatloop   ", type(state), state, "\n\n")
+
         user_input = input("\nYou: ")
-        
         if user_input.lower() in ["exit", "quit", "q"]:
             print("Goodbye!")
             break
-        
-        updated_messages = state.messages.copy()
-        updated_messages.append(HumanMessage(content=user_input))
-        state.messages = updated_messages
+
+        # ✅ Get messages from current state (could be Pydantic or dict)
+        if hasattr(state, "messages"):
+            messages = state.messages.copy()
+        else:
+            messages = state.get("messages", []).copy()
+
+        # ✅ Append new user message (as dict)
+        user_message = HumanMessage(content=user_input)
+        messages.append(user_message.model_dump())  # convert to dict
+
+        # ✅ Create a valid RouterState for the next workflow step
+        state = RouterState(messages=messages)
 
         # Run the workflow
         final_state = workflow.invoke(state)
-        
-        # Extract AI response  #*condition where changed
-        messages = final_state.get("messages", [])
-        if messages and messages[-1]["role"] == "ai":
-            ai_message = messages[-1]
 
-            # ai_message = final_state.messages[-1]     #*i put this line here to test if it works
-            print(f"\nAI ({ai_message['source']}): {ai_message['content']}")
-            
-            # Display citations if available
-            if "citations" in ai_message and ai_message["citations"]:
-                print("\nSources:")
-                for source in ai_message["citations"]:
-                    print(f"- {source}")
-        
-        # Update state for next iteration
+        # ✅ Display AI response
+        messages = final_state.get("messages", [])
+        # for msg in reversed(messages):
+        msg = messages[-1] 
+        if isinstance(msg, dict) and msg.get("role") == "ai":
+            print(f"\nAI: {msg.get('content', '').content}")
+        else:
+            break
+
+        # Move to the next state
         state = final_state
+
+
+
+
 
 def main():
     """Main entry point."""

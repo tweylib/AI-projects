@@ -23,9 +23,9 @@ def create_direct_llm_agent():
         formatted_conversation = system_prompt + "\n\n"
         
         for message in messages:
-            if message["role"] == "human":
+            if message.get("type") == "human":
                 formatted_conversation += f"User: {message['content']}\n"
-            elif message["role"] == "ai":
+            elif message.get("type") == "ai":
                 formatted_conversation += f"Assistant: {message['content']}\n"
         
         # Add prompt for next response

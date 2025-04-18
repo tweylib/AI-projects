@@ -15,17 +15,21 @@ def create_chromadb_agent(vectorstore):
         messages = state.messages
         
         # Get the last message from the user
-        last_message = None
+        last_message = ""
         for message in reversed(messages):
-            if message["role"] == "human":
-                last_message = message
-                break
+            if message.get("type") == "human":
+                last_message += f"User: {message['content']}\n"
+            elif message.get("type") == "ai":
+                last_message += f"Assistant: {message['content']}\n"
+            # if message["role"] == "human":
+            #     last_message = message
+            #     break
         
         if not last_message:
             return {"messages": messages}
         
         # Retrieve relevant documents
-        query = last_message["content"]
+        query = last_message
         docs = vectorstore.similarity_search(query, k=5)
         
         # Format documents into context

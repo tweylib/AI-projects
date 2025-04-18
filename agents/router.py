@@ -33,13 +33,15 @@ def create_router_agent():
     
     def route_query(state):
         """Route the query to the appropriate module."""
+        
         messages = state.messages
         if not messages:
             return {"next_module": None}
-            
+        
         # Get the last message from the user
         last_message = messages[-1]
-        if last_message["role"] != "human":
+        print("\n\nrouteQuery   s",messages, "\n\n")
+        if isinstance(last_message, HumanMessage):   #* if last_message["role"] != "human":
             return {"next_module": None}
             
         user_query = last_message["content"]

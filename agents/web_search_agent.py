@@ -50,7 +50,7 @@ def create_web_search_agent():
         # Get the last message from the user
         last_message = None
         for message in reversed(messages):
-            if message["role"] == "human":
+            if message.get("type") == "human":
                 last_message = message
                 break
         
